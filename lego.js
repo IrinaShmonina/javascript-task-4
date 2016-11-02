@@ -103,7 +103,7 @@ exports.sortBy = function (property, order) {
     return function sortBy(collection) {
         var sortingFactor = getSortingFactor(order);
         var newCollection = collection.sort(function (firstRecord, secondRecord) {
-            return PRIORITIES[firstRecord[property]] < PRIORITIES[secondRecord[property]]
+            return firstRecord[property] <= secondRecord[property]
                 ? sortingFactor * -1
                 : sortingFactor;
         });
