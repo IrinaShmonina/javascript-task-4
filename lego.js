@@ -5,7 +5,7 @@
  * Реализованы методы or и and
  */
 exports.isStar = false;
-var PRIORITIES = {
+var FUNCTIONS_PRIORITY = {
     'filterIn': 1,
     'sortBy': 2,
     'select': 3,
@@ -21,25 +21,16 @@ var PRIORITIES = {
  * @returns {Array}
  */
 exports.query = function (collection) {
-    var collectionCopy = collection.map(getCopy);
+    var collectionCopy = JSON.parse(JSON.stringify(collection));
     var functions = [].slice.call(arguments, 1).sort(function (firstFunc, secondFunc) {
-        return PRIORITIES[firstFunc.name] < PRIORITIES[secondFunc.name] ? -1 : 1;
+        return FUNCTIONS_PRIORITY[firstFunc.name] < FUNCTIONS_PRIORITY[secondFunc.name] ? -1 : 1;
     });
-    for (var func = 0; func < functions.length; func++) {
-        collectionCopy = functions[func](collectionCopy);
-    }
+    collectionCopy = functions.reduce(function (a, func) {
+        return func(a);
+    }, collectionCopy);
 
     return collectionCopy;
 };
-
-function getCopy(object) {
-    var copy = {};
-    Object.keys(object).forEach(function (key) {
-        copy[key] = object[key];
-    });
-
-    return copy;
-}
 
 /**
  * Выбор полей
@@ -101,7 +92,7 @@ function isRecordContainsProperty(record, property, values) {
  */
 exports.sortBy = function (property, order) {
     return function sortBy(collection) {
-        var sortingFactor = getSortingFactor(order);
+        var sortingFactor = order === 'asc' ? 1 : -1;
         var newCollection = collection.sort(function (firstRecord, secondRecord) {
             return firstRecord[property] <= secondRecord[property]
                 ? sortingFactor * -1
@@ -111,14 +102,6 @@ exports.sortBy = function (property, order) {
         return newCollection;
     };
 };
-
-function getSortingFactor(order) {
-    if (order === 'asc') {
-        return 1;
-    }
-
-    return -1;
-}
 
 /**
  * Форматирование поля
@@ -130,16 +113,12 @@ exports.format = function (property, formatter) {
 
     return function format(collection) {
         collection.forEach(function (record) {
-            record[property] = formatProperty(record, property, formatter);
+            record[property] = formatter(record[property]);
         });
 
         return collection;
     };
 };
-
-function formatProperty(record, property, formatter) {
-    return formatter(record[property]);
-}
 
 /**
  * Ограничение количества элементов в коллекции
@@ -149,7 +128,7 @@ function formatProperty(record, property, formatter) {
 exports.limit = function (count) {
 
     return function limit(collection) {
-        return collection.slice(0, count);
+        return collection.slice(0, Math.max(0, count));
     };
 };
 
