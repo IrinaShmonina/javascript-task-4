@@ -5,31 +5,23 @@
  * Реализованы методы or и and
  */
 exports.isStar = false;
-var FUNCTIONS_PRIORITY = {
-    'filterIn': 1,
-    'sortBy': 2,
-    'select': 3,
-    'limit': 4,
-    'format': 5
-};
+var FUNCTIONS_PRIORITY = ['filterIn', 'sortBy', 'limit', 'format', 'select'];
 
 /**
  * Запрос к коллекции
  * @param {Array} collection
  * @params {...Function} – Функции для запроса
  * @returns {Array}
- * @returns {Array}
  */
 exports.query = function (collection) {
     var collectionCopy = JSON.parse(JSON.stringify(collection));
-    var functions = [].slice.call(arguments, 1).sort(function (firstFunc, secondFunc) {
-        return FUNCTIONS_PRIORITY[firstFunc.name] < FUNCTIONS_PRIORITY[secondFunc.name] ? -1 : 1;
+    var functions = [].slice.call(arguments, 1).sort(function (a, b) {
+        return FUNCTIONS_PRIORITY.indexOf(a.name) < FUNCTIONS_PRIORITY.indexOf(b.name) ? -1 : 1;
     });
-    collectionCopy = functions.reduce(function (a, func) {
+
+    return functions.reduce(function (a, func) {
         return func(a);
     }, collectionCopy);
-
-    return collectionCopy;
 };
 
 /**
@@ -41,25 +33,17 @@ exports.select = function () {
     var selectedKeys = [].slice.call(arguments);
 
     return function select(collection) {
-        var newCollection = [];
-        collection.forEach(function (record) {
-            newCollection.push(selectRecord(record, selectedKeys));
-        });
+        return collection.map(function (record) {
+            return selectedKeys.reduce(function (selectedRecord, key) {
+                if (record.hasOwnProperty(key)) {
+                    selectedRecord[key] = record[key];
+                }
 
-        return newCollection;
+                return selectedRecord;
+            }, {});
+        });
     };
 };
-
-function selectRecord(record, selectedKeys) {
-    var selectedRecord = {};
-    for (var key in record) {
-        if (selectedKeys.indexOf(key) !== -1) {
-            selectedRecord[key] = record[key];
-        }
-    }
-
-    return selectedRecord;
-}
 
 /**
  * Фильтрация поля по массиву значений
@@ -69,20 +53,12 @@ function selectRecord(record, selectedKeys) {
  */
 exports.filterIn = function (property, values) {
     return function filterIn(collection) {
-        var newCollection = [];
-        collection.forEach(function (record) {
-            if (isRecordContainsProperty(record, property, values)) {
-                newCollection.push(record);
-            }
-        });
 
-        return newCollection;
+        return collection.filter(function (entry) {
+            return values.indexOf(entry[property]) !== -1;
+        });
     };
 };
-
-function isRecordContainsProperty(record, property, values) {
-    return record.hasOwnProperty(property) && (values.indexOf(record[property]) !== -1);
-}
 
 /**
  * Сортировка коллекции по полю
@@ -93,13 +69,10 @@ function isRecordContainsProperty(record, property, values) {
 exports.sortBy = function (property, order) {
     return function sortBy(collection) {
         var sortingFactor = order === 'asc' ? 1 : -1;
-        var newCollection = collection.sort(function (firstRecord, secondRecord) {
-            return firstRecord[property] <= secondRecord[property]
-                ? sortingFactor * -1
-                : sortingFactor;
-        });
 
-        return newCollection;
+        return collection.sort(function (a, b) {
+            return sortingFactor * (a[property] <= b[property] ? -1 : 1);
+        });
     };
 };
 
