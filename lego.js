@@ -7,6 +7,15 @@
 exports.isStar = false;
 var FUNCTIONS_PRIORITY = ['filterIn', 'sortBy', 'limit', 'format', 'select'];
 
+function getCopy(object) {
+    var copy = {};
+    Object.keys(object).forEach(function (key) {
+        copy[key] = object[key];
+    });
+
+    return copy;
+}
+
 /**
  * Запрос к коллекции
  * @param {Array} collection
@@ -14,13 +23,14 @@ var FUNCTIONS_PRIORITY = ['filterIn', 'sortBy', 'limit', 'format', 'select'];
  * @returns {Array}
  */
 exports.query = function (collection) {
-    var collectionCopy = JSON.parse(JSON.stringify(collection));
+    var collectionCopy = collection.map(getCopy);
     var functions = [].slice.call(arguments, 1).sort(function (a, b) {
         return FUNCTIONS_PRIORITY.indexOf(a.name) < FUNCTIONS_PRIORITY.indexOf(b.name) ? -1 : 1;
     });
 
-    return functions.reduce(function (a, func) {
-        return func(a);
+    return functions.reduce(function (currentCollection, operator) {
+
+        return operator(currentCollection);
     }, collectionCopy);
 };
 
